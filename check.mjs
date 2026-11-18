@@ -86,12 +86,16 @@ async function main() {
     if (reviews.length === 0) { yolo = pr; break; }
   }
 
-  // Galaxy Brain: accepted answers in Discussions (GraphQL, needs a token).
+  // Galaxy Brain (accepted Discussion answers) and Public Sponsor (GraphQL, needs a token).
   const gql = await graphql(
-    `query($login: String!) { user(login: $login) { repositoryDiscussionComments(onlyAnswers: true) { totalCount } } }`,
+    `query($login: String!) { user(login: $login) {
+      repositoryDiscussionComments(onlyAnswers: true) { totalCount }
+      sponsoring { totalCount }
+    } }`,
     { login: user },
   );
   const answers = gql ? gql.user.repositoryDiscussionComments.totalCount : null;
+  const sponsoring = gql ? gql.user.sponsoring.totalCount : null;
 
   if (json) {
     console.log(JSON.stringify({
@@ -101,6 +105,7 @@ async function main() {
       quickdraw: { earned: !!quick, example: quick ? quick.html_url : null },
       yolo: { earned: !!yolo, example: yolo ? yolo.html_url : null },
       galaxyBrain: answers === null ? null : { acceptedAnswers: answers, tier: tierIndex(answers, TIERS.galaxyBrain) },
+      publicSponsor: sponsoring === null ? null : { sponsoring, earned: sponsoring > 0 },
     }, null, 2));
     return;
   }
@@ -115,7 +120,10 @@ async function main() {
   } else {
     console.log(`${mark(answers >= 2)} Galaxy Brain ${answers} accepted answers: ${tier(answers, TIERS.galaxyBrain)}`);
   }
-  console.log(`\nNot checked: Pair Extraordinaire, Public Sponsor.`);
+  if (sponsoring !== null) {
+    console.log(`${mark(sponsoring > 0)} Public Sponsor ${sponsoring > 0 ? `sponsoring ${sponsoring} account(s)` : "not sponsoring anyone publicly"}`);
+  }
+  console.log(`\nNot checked: Pair Extraordinaire.`);
   console.log(`See README.md for how to earn each one.\n`);
 }
 
