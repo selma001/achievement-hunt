@@ -3,13 +3,14 @@
 // Usage: node check.mjs <username>
 // Optional: set GITHUB_TOKEN to raise the API rate limit (60 -> 5000 requests/hour).
 
-import { TIERS, tier, isQuickdraw } from "./lib.mjs";
+import { TIERS, tier, tierIndex, isQuickdraw } from "./lib.mjs";
 
 const HELP = `Usage: node check.mjs <username> [options]
 
 Shows how close a GitHub user is to earning profile achievements.
 
 Options:
+  --json       Print results as JSON (tier: -1 none, 0 base, 1-3 x2-x4)
   -h, --help   Show this help
 
 Environment:
@@ -20,6 +21,7 @@ if (args.includes("-h") || args.includes("--help")) {
   console.log(HELP);
   process.exit(0);
 }
+const json = args.includes("--json");
 const user = args.find((a) => !a.startsWith("-"));
 if (!user) {
   console.error(HELP);
@@ -68,6 +70,17 @@ async function main() {
     const [, owner, repo] = pr.repository_url.match(/repos\/([^/]+)\/(.+)$/);
     const reviews = await api(`/repos/${owner}/${repo}/pulls/${pr.number}/reviews`);
     if (reviews.length === 0) { yolo = pr; break; }
+  }
+
+  if (json) {
+    console.log(JSON.stringify({
+      user,
+      pullShark: { mergedPRs: merged.total_count, tier: tierIndex(merged.total_count, TIERS.pullShark) },
+      starstruck: { stars, repo: top ? top.full_name : null, tier: tierIndex(stars, TIERS.starstruck) },
+      quickdraw: { earned: !!quick, example: quick ? quick.html_url : null },
+      yolo: { earned: !!yolo, example: yolo ? yolo.html_url : null },
+    }, null, 2));
+    return;
   }
 
   console.log(`\nAchievement check for ${user}\n`);
