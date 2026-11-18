@@ -19,12 +19,29 @@ Achievement check for octocat
 [ ] Starstruck   4 stars on my-project: not yet, next at 16
 [x] Quickdraw    https://github.com/octocat/demo/issues/1
 [x] YOLO         https://github.com/octocat/demo/pull/2
+[ ] Galaxy Brain 1 accepted answers: not yet, next at 2
+[ ] Public Sponsor not sponsoring anyone publicly
 ```
 
-Anonymous requests are limited to 60 per hour. If you hit the limit, pass a token:
+### With a token
+
+Galaxy Brain and Public Sponsor use the GraphQL API, which needs a token. A token also raises the rate limit from 60 to 5000 requests per hour:
 
 ```bash
 GITHUB_TOKEN=$(gh auth token) node check.mjs <github-username>
+```
+
+### Options
+
+| Option | What it does |
+|---|---|
+| `--json` | Print results as JSON. `tier` is -1 (none), 0 (base) or 1-3 (x2-x4). |
+| `-h`, `--help` | Show usage. |
+
+### Development
+
+```bash
+npm test
 ```
 
 ## The achievements
