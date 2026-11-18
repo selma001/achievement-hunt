@@ -1,2 +1,3 @@
 # achievement-hunt
-Small practice repo
+
+A small practice repository.
