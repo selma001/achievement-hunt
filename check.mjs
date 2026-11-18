@@ -46,6 +46,20 @@ async function api(path) {
   return res.json();
 }
 
+// GraphQL is only available with a token. Returns null when no token is set.
+async function graphql(query, variables) {
+  if (!process.env.GITHUB_TOKEN) return null;
+  const res = await fetch("https://api.github.com/graphql", {
+    method: "POST",
+    headers,
+    body: JSON.stringify({ query, variables }),
+  });
+  if (!res.ok) throw new Error(`GitHub GraphQL ${res.status}`);
+  const body = await res.json();
+  if (body.errors) throw new Error(`GitHub GraphQL: ${body.errors[0].message}`);
+  return body.data;
+}
+
 const mark = (ok) => (ok ? "[x]" : "[ ]");
 
 async function main() {
@@ -72,6 +86,13 @@ async function main() {
     if (reviews.length === 0) { yolo = pr; break; }
   }
 
+  // Galaxy Brain: accepted answers in Discussions (GraphQL, needs a token).
+  const gql = await graphql(
+    `query($login: String!) { user(login: $login) { repositoryDiscussionComments(onlyAnswers: true) { totalCount } } }`,
+    { login: user },
+  );
+  const answers = gql ? gql.user.repositoryDiscussionComments.totalCount : null;
+
   if (json) {
     console.log(JSON.stringify({
       user,
@@ -79,6 +100,7 @@ async function main() {
       starstruck: { stars, repo: top ? top.full_name : null, tier: tierIndex(stars, TIERS.starstruck) },
       quickdraw: { earned: !!quick, example: quick ? quick.html_url : null },
       yolo: { earned: !!yolo, example: yolo ? yolo.html_url : null },
+      galaxyBrain: answers === null ? null : { acceptedAnswers: answers, tier: tierIndex(answers, TIERS.galaxyBrain) },
     }, null, 2));
     return;
   }
@@ -88,7 +110,12 @@ async function main() {
   console.log(`${mark(stars >= 16)} Starstruck   ${stars} stars${top ? ` on ${top.name}` : ""}: ${tier(stars, TIERS.starstruck)}`);
   console.log(`${mark(!!quick)} Quickdraw    ${quick ? `${quick.html_url}` : "no fast close found in recent activity"}`);
   console.log(`${mark(!!yolo)} YOLO         ${yolo ? `${yolo.html_url}` : "no unreviewed merged PR found recently"}`);
-  console.log(`\nNot checkable through the public REST API: Pair Extraordinaire, Galaxy Brain, Public Sponsor.`);
+  if (answers === null) {
+    console.log(`[?] Galaxy Brain set GITHUB_TOKEN to check accepted Discussion answers`);
+  } else {
+    console.log(`${mark(answers >= 2)} Galaxy Brain ${answers} accepted answers: ${tier(answers, TIERS.galaxyBrain)}`);
+  }
+  console.log(`\nNot checked: Pair Extraordinaire, Public Sponsor.`);
   console.log(`See README.md for how to earn each one.\n`);
 }
 
