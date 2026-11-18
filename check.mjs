@@ -3,6 +3,8 @@
 // Usage: node check.mjs <username>
 // Optional: set GITHUB_TOKEN to raise the API rate limit (60 -> 5000 requests/hour).
 
+import { TIERS, tier, isQuickdraw } from "./lib.mjs";
+
 const user = process.argv[2];
 if (!user) {
   console.error("Usage: node check.mjs <username>");
@@ -27,15 +29,6 @@ async function api(path) {
   return res.json();
 }
 
-function tier(value, steps) {
-  const names = ["Bronze", "Silver", "Gold"];
-  let reached = -1;
-  steps.forEach((s, i) => { if (value >= s) reached = i; });
-  const label = reached === -1 ? "not yet" : reached === 0 ? "Base" : `x${reached + 1} (${names[reached - 1]})`;
-  const next = steps[reached + 1];
-  return next ? `${label}, next at ${next}` : `${label}, max tier`;
-}
-
 const mark = (ok) => (ok ? "[x]" : "[ ]");
 
 async function main() {
@@ -52,7 +45,7 @@ async function main() {
 
   // Quickdraw: an issue or PR closed within 5 minutes of being opened (checks the 100 most recent).
   const closed = await api(`/search/issues?q=${q(`author:${user} is:closed`)}&per_page=100&sort=created`);
-  const quick = closed.items.find((i) => new Date(i.closed_at) - new Date(i.created_at) <= 5 * 60 * 1000);
+  const quick = closed.items.find(isQuickdraw);
 
   // YOLO: a merged PR with no review (checks the 20 most recent merged PRs).
   let yolo = null;
@@ -63,8 +56,8 @@ async function main() {
   }
 
   console.log(`\nAchievement check for ${user}\n`);
-  console.log(`${mark(merged.total_count >= 2)} Pull Shark   ${merged.total_count} merged PRs: ${tier(merged.total_count, [2, 16, 128, 1024])}`);
-  console.log(`${mark(stars >= 16)} Starstruck   ${stars} stars${top ? ` on ${top.name}` : ""}: ${tier(stars, [16, 128, 512, 4096])}`);
+  console.log(`${mark(merged.total_count >= 2)} Pull Shark   ${merged.total_count} merged PRs: ${tier(merged.total_count, TIERS.pullShark)}`);
+  console.log(`${mark(stars >= 16)} Starstruck   ${stars} stars${top ? ` on ${top.name}` : ""}: ${tier(stars, TIERS.starstruck)}`);
   console.log(`${mark(!!quick)} Quickdraw    ${quick ? `${quick.html_url}` : "no fast close found in recent activity"}`);
   console.log(`${mark(!!yolo)} YOLO         ${yolo ? `${yolo.html_url}` : "no unreviewed merged PR found recently"}`);
   console.log(`\nNot checkable through the public REST API: Pair Extraordinaire, Galaxy Brain, Public Sponsor.`);
