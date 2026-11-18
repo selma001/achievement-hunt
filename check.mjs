@@ -5,9 +5,24 @@
 
 import { TIERS, tier, isQuickdraw } from "./lib.mjs";
 
-const user = process.argv[2];
+const HELP = `Usage: node check.mjs <username> [options]
+
+Shows how close a GitHub user is to earning profile achievements.
+
+Options:
+  -h, --help   Show this help
+
+Environment:
+  GITHUB_TOKEN  Token used for API requests (raises the rate limit)`;
+
+const args = process.argv.slice(2);
+if (args.includes("-h") || args.includes("--help")) {
+  console.log(HELP);
+  process.exit(0);
+}
+const user = args.find((a) => !a.startsWith("-"));
 if (!user) {
-  console.error("Usage: node check.mjs <username>");
+  console.error(HELP);
   process.exit(1);
 }
 
